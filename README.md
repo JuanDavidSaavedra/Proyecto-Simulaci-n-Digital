@@ -68,7 +68,7 @@ Atributos clave:
 
 * [Informe Final del Proyecto (PDF)](./informe_final.pdf)
 * [Artículo Base](https://informs-sim.org/wsc24papers/inv111.pdf)
-* [Presentación en YouTube]()
+* [Presentación en YouTube](https://youtu.be/5_sbM9FpJsc?si=QsEoswbqLccc8OEA)
 
 ---
 
