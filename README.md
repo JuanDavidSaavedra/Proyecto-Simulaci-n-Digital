@@ -1,4 +1,3 @@
-````markdown
 # 🦠 Simulación de la Influenza Aviar H5N1 en Aves Silvestres – Irlanda 🇮🇪
 
 Este proyecto implementa un modelo híbrido de simulación para analizar la transmisión y progresión de la influenza aviar H5N1 en aves silvestres en Irlanda. Utiliza un enfoque comparativo entre dos métodos:  
@@ -6,7 +5,6 @@ Este proyecto implementa un modelo híbrido de simulación para analizar la tran
 - **OSA** (*Outcomes Sampling and Allocation*)
 
 El objetivo es comparar eficiencia y precisión entre ambos modelos para evaluar años de vida, calidad de vida ajustada (QALYs) y costos sanitarios.
-````
 
 ---
 
