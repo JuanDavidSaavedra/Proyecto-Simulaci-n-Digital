@@ -1,4 +1,4 @@
-# 🦠 Simulación de la Influenza Aviar H5N1 en Aves Silvestres – Irlanda 🇮🇪
+# 🦠 Simulación de la Influenza Aviar H5N1 en Aves Silvestres – Irlanda
 
 Este proyecto implementa un modelo híbrido de simulación para analizar la transmisión y progresión de la influenza aviar H5N1 en aves silvestres en Irlanda. Utiliza un enfoque comparativo entre dos métodos:  
 - **WSA** (*Without Sampling and Allocation*)  
