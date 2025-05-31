@@ -1,0 +1,323 @@
+---
+title: "Proyecto Final Simulación Digital - F1"
+output: html_notebook
+---
+
+```{r}
+# ----------------------------------------------------------
+# Juan David Saavedra González - 2214111
+# Sergio Nelson Alberto Gómez Gil - 2214106
+# Juan Pablo Ávila Quitián - 2214107
+# Prof. David Romo Bucheli, PhD
+# 2025-06-03
+# ----------------------------------------------------------
+
+# ----------------------------------------------------------
+# Análisis Exploratorio de los Datos (EDA)
+# ----------------------------------------------------------
+
+# Cargar librerías necesarias para manipulación y visualización de datos
+suppressPackageStartupMessages({
+  library(dplyr)    # Manipulación de dataframes
+  library(ggplot2)  # Visualización de datos
+  library(tidyr)    # Transformación de datos (long, wide, etc.)
+  library(maps)       # Para el mapa de Irlanda
+})
+
+# Leer el conjunto de datos CSV que contiene información de aves silvestres en Irlanda (Cambiar ruta de ser necesario)
+df <- read.csv("C:/Users/juanj/OneDrive/Escritorio/UIS/SEMESTRE 8°/SIMULACIÓN DIGITAL/Proyecto/Dataset.csv")
+
+# Filtrar únicamente los registros de aves que fueron positivas para H5 HPAI (infectadas)
+infectados <- df %>% filter(target_H5_HPAI == 1)
+
+# 1. DISTRIBUCIÓN GEOGRÁFICA DE AVES INFECTADAS (MAPA)
+
+# Mapa base de Irlanda
+mapa_irlanda <- map_data("world") %>% filter(region == "Ireland")
+
+# Gráfico de puntos geográficos sobre el mapa de Irlanda
+ggplot() +
+  geom_polygon(data = mapa_irlanda, aes(x = long, y = lat, group = group),
+               fill = "gray90", color = "black") +
+  geom_point(data = infectados, aes(x = Longitude, y = Latitude),
+             color = "red", alpha = 0.6, size = 2) +
+  coord_fixed(1.3) +
+  labs(title = "Distribución geográfica de aves infectadas (H5 HPAI)",
+       subtitle = "Ubicaciones en Irlanda según coordenadas",
+       x = "Longitud", y = "Latitud") +
+  theme_minimal()
+
+# 2. DISTRIBUCIÓN TEMPORAL DE CASOS POR AÑO (1980–2020)
+
+df %>%
+  filter(target_H5_HPAI == 1, Year >= 1980, Year <= 2020) %>%
+  group_by(Year) %>%
+  summarise(Casos = n()) %>%
+  ggplot(aes(x = Year, y = Casos)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = Casos), vjust = -0.5, size = 3) +
+  labs(title = "Casos de H5 HPAI por año (1980–2020)",
+       x = "Año", y = "Número de casos") +
+  theme_minimal()
+
+# 3. TABLA Y GRÁFICO DE FRECUENCIA POR ESPECIE
+
+# Tabla de frecuencia por nombre común
+tabla_especies <- infectados %>%
+  group_by(Common_Name) %>%
+  summarise(Casos = n()) %>%
+  arrange(desc(Casos))
+
+print(tabla_especies)  # Mostrar tabla en consola
+
+# Gráfico de las 10 especies más infectadas
+tabla_especies %>%
+  slice_max(Casos, n = 10) %>%
+  ggplot(aes(x = reorder(Common_Name, Casos), y = Casos)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Top 10 especies con mayor número de casos H5 HPAI",
+       x = "Especie común", y = "Número de casos") +
+  theme_minimal()
+
+# Estadísticas de las columnas del Dataset
+summary(df)
+
+#Tabla resumen de infecciones
+resumen_infecciones <- df %>%
+  mutate(Infección = ifelse(target_H5_HPAI == 1, "Infectado", "No infectado")) %>%
+  count(Infección) %>%
+  mutate(Porcentaje = round(100 * n / sum(n), 2))
+print(resumen_infecciones)
+
+# Gráfica resumen de infecciones
+ggplot(resumen_infecciones, aes(x = "", y = n, fill = Infección)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(Porcentaje, "%")),
+            position = position_stack(vjust = 0.5),
+            color = "white", size = 5) +
+  labs(title = "Distribución de aves infectadas vs no infectadas",
+       fill = "Estado de infección") +
+  theme_void() +
+  scale_fill_manual(values = c("Infectado" = "red", "No infectado" = "darkgreen"))
+```
+
+```{r}
+# ----------------------------------------------------------
+# Código de los modelos OSA Y WSA
+# ----------------------------------------------------------
+
+# Asignar una edad aleatoria entre 1 y 15 años a cada especie de ave
+set.seed(123)  # Fijar semilla para reproducibilidad
+especies <- unique(infectados$Scientific_Name)  # Extraer especies únicas
+# Asignar una edad aleatoria a cada especie
+edad_por_especie <- setNames(sample(1:15, length(especies), replace = TRUE), especies)
+# Agregar la edad al dataframe
+infectados$edad <- edad_por_especie[infectados$Scientific_Name]
+
+# Definir parámetros generales para la simulación
+esperanza_vida <- 20  # Edad máxima simulada (años)
+
+# Utilidad en cada estado de salud (para calcular QALYs)
+utilidad <- c(S1 = 0.9, S2 = 0.7, S3 = 0.5)
+
+# Costo asociado por año en cada estado de salud
+costo <- c(S1 = 100, S2 = 300, S3 = 1000)
+
+# Probabilidades de transición entre estados en el modelo de Markov
+transiciones <- list(
+  S1 = c("S2" = 0.2),    # 20% probabilidad de pasar de S1 a S2
+  S2 = c("S3" = 0.3),    # 30% probabilidad de pasar de S2 a S3
+  S3 = c("DRD" = 0.5)    # 50% probabilidad de pasar de S3 a muerte (DRD)
+)
+
+# Función de simulación para un individuo usando el método tradicional WSA
+simular_individuo <- function(edad_inicial) {
+  estado <- "S1"  # Estado inicial
+  edad <- edad_inicial
+  ly <- 0         # Años de vida acumulados
+  qaly <- 0       # QALYs acumulados
+  costo_total <- 0  # Costo acumulado
+
+  # Ciclo hasta que muera (estado DRD) o supere la esperanza de vida
+  while (edad < esperanza_vida && estado != "DRD") {
+    ly <- ly + 1
+    qaly <- qaly + utilidad[estado]        # Se suma utilidad del estado actual
+    costo_total <- costo_total + costo[estado]  # Se suma costo del estado actual
+
+    # Simular si ocurre una transición de estado usando número aleatorio
+    p <- runif(1)
+    trans <- transiciones[[estado]]
+    if (!is.null(trans)) {
+      if (p < trans[[1]]) {
+        estado <- names(trans)[1]  # Cambiar de estado si ocurre la transición
+      }
+    } else {
+      estado <- "DRD"  # Si no hay transición, se considera muerte
+    }
+    edad <- edad + 1  # Avanzar un año
+  }
+
+  # Retornar los resultados para ese individuo
+  return(data.frame(LY = ly, QALY = qaly, Cost = costo_total))
+}
+
+# Aplicar la simulación WSA a cada infectado
+resultados <- infectados %>%
+  rowwise() %>%
+  mutate(sim = list(simular_individuo(edad))) %>%  # Aplicar la función a cada fila
+  tidyr::unnest(sim)  # Expandir los resultados en columnas
+
+# Convertir a formato largo para graficar CDFs
+long <- resultados %>% select(LY, QALY, Cost) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Graficar resultados con distribución acumulada (CDF) por variable
+ggplot(long, aes(x = Valor)) +
+  stat_ecdf(geom = "step", color = "blue") +
+  facet_wrap(~ Variable, scales = "free") +
+  labs(title = "Simulación tipo WSA: LY, QALY y Costos", y = "CDF", x = "") +
+  theme_minimal()
+```
+```{r}
+# Número de simulaciones que se generan por edad para el repositorio
+set.seed(123)
+n_replicas <- 10000
+
+# Función para generar múltiples trayectorias simuladas por edad
+simular_repositorio <- function(edad_inicial) {
+  replicate(n_replicas, {
+    estado <- "S1"
+    edad <- edad_inicial
+    ly <- 0
+    qaly <- 0
+    costo_total <- 0
+
+    while (edad < esperanza_vida && estado != "DRD") {
+      ly <- ly + 1
+      qaly <- qaly + utilidad[estado]
+      costo_total <- costo_total + costo[estado]
+
+      p <- runif(1)
+      trans <- transiciones[[estado]]
+      if (!is.null(trans)) {
+        if (p < trans[[1]]) {
+          estado <- names(trans)[1]
+        }
+      } else {
+        estado <- "DRD"
+      }
+      edad <- edad + 1
+    }
+    c(LY = ly, QALY = qaly, Cost = costo_total)
+  }) %>% t() %>% as.data.frame()
+}
+
+# Crear repositorio por edad (1 a 15 años)
+edades <- 1:15
+repositorio <- lapply(edades, simular_repositorio)
+names(repositorio) <- as.character(edades)
+
+# Asignar aleatoriamente una trayectoria precalculada a cada individuo
+asignar_outcome_osa <- function(edad) {
+  outcomes <- repositorio[[as.character(edad)]]
+  outcomes[sample(nrow(outcomes), 1), ]  # Elegir una fila aleatoria
+}
+
+# Aplicar el método OSA a todos los individuos infectados
+resultados_osa <- infectados %>%
+  rowwise() %>%
+  mutate(out = list(asignar_outcome_osa(edad))) %>%
+  tidyr::unnest(cols = c(out))
+
+# Renombrar columnas si es necesario (precaución con nombres)
+resultados_osa <- resultados_osa %>%
+  rename(QALY = `QALY.S1`, Cost = `Cost.S1`)
+
+# Formato largo para graficar
+long_osa <- resultados_osa %>% select(LY, QALY, Cost) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Gráfico de distribución acumulada para método OSA
+ggplot(long_osa, aes(x = Valor)) +
+  stat_ecdf(geom = "step", color = "orange") +
+  facet_wrap(~ Variable, scales = "free") +
+  labs(title = "Simulación tipo OSA: LY, QALY y Costos", y = "CDF", x = "") +
+  theme_minimal()
+```
+```{r}
+# ----------------------------------------------------------
+# Comparativa de los modelos OSA Y WSA
+# ----------------------------------------------------------
+
+# Asegurar que WSA también tiene columna de método
+long$Metodo <- "WSA"
+long_osa$Metodo <- "OSA"
+
+# Unir ambos conjuntos
+comparado <- bind_rows(long, long_osa)
+
+# Graficar comparación
+ggplot(comparado, aes(x = Valor, color = Metodo)) +
+  stat_ecdf(geom = "step") +
+  facet_wrap(~ Variable, scales = "free") +
+  labs(
+    title = "Comparación de CDFs: WSA vs OSA",
+    y = "CDF", x = ""
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("WSA" = "blue", "OSA" = "orange"))
+```
+
+```{r}
+# ----------------------------------------------------------
+# Tablas de resultados de los modelos WSA y OSA
+# ----------------------------------------------------------
+
+# Cargar librería
+suppressPackageStartupMessages({
+  library(knitr)
+  library(kableExtra)
+})
+# Tablas con nombres claros
+tabla_wsa <- resultados %>% select("Años de Vida (LY)" = LY, "QALY" = QALY, "Costo Total" = Cost)
+tabla_osa <- resultados_osa %>% select("Años de Vida (LY)" = LY, "QALY" = QALY, "Costo Total" = Cost)
+
+# Mostrar primeras 10 filas de cada una como ejemplo
+kable(head(tabla_wsa, 10), caption = "Tabla de resultados del modelo WSA") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
+kable(head(tabla_osa, 10), caption = "Tabla de resultados del modelo OSA") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+```{r}
+# ----------------------------------------------------------
+# Métricas y Tiempos de Ejecucción
+# ----------------------------------------------------------
+
+# Medir tiempo de ejecución de WSA
+tiempo_wsa <- system.time({
+  resultados <- infectados %>%
+    rowwise() %>%
+    mutate(sim = list(simular_individuo(edad))) %>%
+    tidyr::unnest(sim)
+})
+
+# Medir tiempo de ejecución de OSA
+tiempo_osa <- system.time({
+  resultados_osa <- infectados %>%
+    rowwise() %>%
+    mutate(out = list(asignar_outcome_osa(edad))) %>%
+    tidyr::unnest(cols = c(out))
+})
+
+cat("Tiempos de ejecucción entre los 2 modelos:\n\n")
+cat("Tiempos WSA:\n")
+print(tiempo_wsa)
+cat("\n")
+cat("Tiempos OSA:\n")
+print(tiempo_osa)
+```
+
