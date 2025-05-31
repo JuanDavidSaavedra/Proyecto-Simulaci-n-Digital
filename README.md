@@ -28,7 +28,9 @@ El modelo combina dos componentes principales:
 ## 📊 Dataset
 
 Fuente: [Bird Flu Dataset – Avian Influenza (Kaggle)](https://www.kaggle.com/datasets/jasmeet0516/bird-flu-dataset-avian-influenza)
+
 Observaciones: 16,304 aves (con un 15.85% infectadas)
+
 Atributos clave:
 
 * Nombre científico
