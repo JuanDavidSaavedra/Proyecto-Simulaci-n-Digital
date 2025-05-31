@@ -77,24 +77,38 @@ Atributos clave:
 ## 💬 Referencias
 
 * Artículo científico
+
 Modelado de la propagación de influenza aviar en poblaciones de aves silvestres: Un enfoque basado en simulación
+
 Disponible en: https://informs-sim.org/wsc24papers/inv111.pdf
+
 Accedido el: 20/03/2025
 
+
 * Dataset de trabajo
+
 Bird Flu Dataset (Avian Influenza) - Kaggle
+
 Fuente primaria de datos para el análisis y simulación.
+
 Disponible en:https://www.kaggle.com/datasets/jasmeet0516/bird-flu-dataset-avian-influenza
+
 Última actualización: 2024
 
 * Video-Presentación
+  
 Avance 2 Proyecto Final Simulación Digital 2025-1 F1
+
 Video disponible en: https://youtu.be/5_sbM9FpJsc?si=QsEoswbqLccc8OEA
+
 Publicado el: 31/05/2025
 
 * Repositorio del Proyecto
+  
 Proyecto de Simulación Digital – Transmisión y Progresión de la Influenza Aviar H5N1 en Aves Silvestres en Irlanda.
+
 Disponible en: https://github.com/JuanDavidSaavedra/Proyecto-Simulacion-Digital.git
+
 Accedido el: 31/05/2025
 
 ---
