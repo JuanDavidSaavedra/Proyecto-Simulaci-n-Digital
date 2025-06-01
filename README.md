@@ -68,7 +68,7 @@ Atributos clave:
 
 ## 📄 Documentos Relevantes
 
-* [Informe Final del Proyecto (PDF)](https://github.com/user-attachments/files/20536784/Entrega.Final_.Proyecto.Simulacion.Digital.pdf)
+* [Informe Final del Proyecto (PDF)](https://github.com/user-attachments/files/20536786/Entrega.Final_.Proyecto.Simulacion.Digital.pdf)
 * [Artículo Base](https://informs-sim.org/wsc24papers/inv111.pdf)
 * [Presentación en YouTube](https://youtu.be/5_sbM9FpJsc?si=QsEoswbqLccc8OEA)
 
